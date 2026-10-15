@@ -11,8 +11,8 @@ Emulated models:
 | `model`     | Shelly device    | channels | Sigen use            |
 |-------------|------------------|----------|----------------------|
 | `pro1pm`    | Shelly Pro 1PM   | 1 switch | smart load           |
-| `pro2pm`    | Shelly Pro 2PM   | 2 switch | smart load (tested identity, see below) |
-| `pro4pm`    | Shelly Pro 4PM   | 4 switch | smart load           |
+| `pro2pm`    | Shelly Pro 2PM   | 2 switch | smart load           |
+| `pro4pm`    | Shelly Pro 4PM   | 4 switch | smart load (**verified with mySigen**) |
 | `plus1pm`   | Shelly Plus 1PM  | 1 switch | smart load           |
 | `plus2pm`   | Shelly Plus 2PM  | 2 switch | smart load           |
 | `plusplugs` | Shelly Plus Plug S | 1 switch | smart load         |
@@ -38,10 +38,16 @@ Read [docs/DESIGN.md](docs/DESIGN.md) for the protocol findings behind these cho
 
 ## Status
 
-Freshly written and compiled, **not yet paired with a real Sigenergy system**. The HTTP
-surface mirrors two emulators that are known to work with mySigen (Tasmota's Pro 2PM
-emulation and sigelly_emu's Pro 3EM), so the `pro2pm` and `pro3em` identities are the
-best bets for a first test. BLE is experimental. Please report what works.
+**Working with a real Sigenergy installation** (October 2026): an ESP32 emulating a
+`pro4pm` with four Home Assistant smart plugs was discovered by mySigen via
+"Smart Load → WLAN Network", paired, shows live power and energy per channel in
+the Sigen app, and the SigenStor can switch each plug on and off through Home
+Assistant.
+
+The other switch identities share the same code path and payloads, so they are
+expected to work but have not been tried. `pro3em` (Modbus TCP meter) mirrors a
+working third-party emulator but is untested here. BLE is experimental. Please
+report what works or fails.
 
 ## Quick start
 

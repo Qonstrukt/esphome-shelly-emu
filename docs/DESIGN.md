@@ -65,9 +65,11 @@ derived from it. Sources are listed at the bottom.
   `_http._tcp` (TXT gen) on port 80.
 * HTTP responses carry `Server: ShellyHTTP/1.0.0`.
 
-The `pro2pm` identity is the one Tasmota uses and is known to pair with
-mySigen; `pro3em` is the one sigelly_emu uses. The other codes come from the
-Shelly API docs and device captures and are not yet verified with mySigen.
+Verified 2026-10-15 with a real SigenStor / mySigen: `pro4pm` (four channels
+fed from Home Assistant plugs) is discovered via the WLAN scan, pairs, reports
+power and energy, and accepts switch commands. The `pro2pm` identity is the one
+Tasmota uses and `pro3em` the one sigelly_emu uses; the remaining codes come
+from the Shelly API docs and device captures and are not yet verified.
 
 ## 3. Architecture
 
