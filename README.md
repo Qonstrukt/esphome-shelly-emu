@@ -39,10 +39,10 @@ Read [docs/DESIGN.md](docs/DESIGN.md) for the protocol findings behind these cho
 ## Status
 
 **Working with a real Sigenergy installation** (October 2026): an ESP32 emulating a
-`pro4pm` with four Home Assistant smart plugs was discovered by mySigen via
-"Smart Load → WLAN Network", paired, shows live power and energy per channel in
-the Sigen app, and the SigenStor can switch each plug on and off through Home
-Assistant.
+`pro4pm` with four Home Assistant smart plugs was discovered by mySigen's
+"Add System Device" scan over the LAN (no BLE needed), paired, shows all four
+channels with live power and energy in the Sigen app, and the SigenStor can
+switch each plug on and off through Home Assistant.
 
 The other switch identities share the same code path and payloads, so they are
 expected to work but have not been tried. `pro3em` (Modbus TCP meter) mirrors a
@@ -89,10 +89,12 @@ shelly_emu:
    read states but cannot switch anything.
 5. Flash, check the log for `mDNS: ShellyPro2PM-....local advertising _shelly._tcp`,
    then run `python3 tools/validate.py http://<node-ip>`.
-6. mySigen: **Add device → Smart Load → WLAN Network**, pick the device, give it a
-   name. For multi-channel models only the first channel is added during pairing;
-   add the others from the Smart Load section afterwards (that is how mySigen handles
-   real Pro 2PM / 4PM units).
+6. mySigen (current app versions): **Device tab → Add System Device**. The screen
+   says "Auto-detecting nearby devices" and shows a Bluetooth icon, but it also scans
+   the LAN: the emulator appears as e.g. "Shelly Pro 4PM, SN:<MAC>" with a Wi-Fi badge
+   even when `ble` is off. Tick it and press **Add**. (Older app versions had an
+   explicit "Smart Load → WLAN Network" entry instead.) All channels of a multi-channel
+   model show up as separate smart home devices.
 
 Complete examples: [examples/](examples/).
 

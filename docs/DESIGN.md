@@ -10,8 +10,11 @@ derived from it. Sources are listed at the bottom.
   mySigen app discover Shelly Gen2 devices with **mDNS** (`_shelly._tcp`,
   TXT `gen=2`, `app=<App>`, `ver=<version>`) and then use the **Shelly Gen2
   JSON-RPC API over HTTP** (`GET /shelly`, `GET /rpc/<Method>?...`,
-  `POST /rpc`). The documented add-device flow in mySigen offers
-  "WLAN Network" (device already on Wi-Fi, the common case) and "Bluetooth".
+  `POST /rpc`). Older mySigen versions offered "WLAN Network" and "Bluetooth"
+  as separate add-device options; current versions (October 2026) have a single
+  "Add System Device" screen that shows a Bluetooth icon but scans BLE *and*
+  the LAN at the same time. A node with BLE disabled is found over mDNS and
+  listed with a Wi-Fi badge, which confirms the LAN path is what matters.
 * **Bluetooth is only a provisioning front door.** Shelly's and Sigenergy's
   own guides say the Bluetooth option is for a factory-fresh Shelly that is
   not on Wi-Fi yet: the phone connects to the Shelly over BLE RPC, pushes
@@ -66,8 +69,9 @@ derived from it. Sources are listed at the bottom.
 * HTTP responses carry `Server: ShellyHTTP/1.0.0`.
 
 Verified 2026-10-15 with a real SigenStor / mySigen: `pro4pm` (four channels
-fed from Home Assistant plugs) is discovered via the WLAN scan, pairs, reports
-power and energy, and accepts switch commands. The `pro2pm` identity is the one
+fed from Home Assistant plugs, BLE disabled) is discovered by the app's
+auto-detect scan over the LAN, pairs, shows all four channels, reports power
+and energy, and accepts switch commands. The `pro2pm` identity is the one
 Tasmota uses and `pro3em` the one sigelly_emu uses; the remaining codes come
 from the Shelly API docs and device captures and are not yet verified.
 
