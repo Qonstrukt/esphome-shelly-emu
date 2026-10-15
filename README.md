@@ -44,10 +44,11 @@ Read [docs/DESIGN.md](docs/DESIGN.md) for the protocol findings behind these cho
 channels with live power and energy in the Sigen app, and the SigenStor can
 switch each plug on and off through Home Assistant.
 
-The other switch identities share the same code path and payloads, so they are
-expected to work but have not been tried. `pro3em` (Modbus TCP meter) mirrors a
-working third-party emulator but is untested here. BLE is experimental. Please
-report what works or fails.
+Also verified: `pro3em` with `output_addon`, paired as "Metering & Control": the
+SigenStor reads live power over Modbus TCP and switches the add-on relay (an HA
+switch) through Modbus coil 1100. The other switch identities share the same code
+path and payloads, so they are expected to work but have not been tried. BLE is
+experimental. Please report what works or fails.
 
 ## Quick start
 
@@ -153,10 +154,16 @@ Notes:
   several independent Shellys would need several IPs. Use `pro4pm` for up to four
   independently controlled loads on one board, or one board per device.
 * When mySigen pairs a Pro 3EM it asks "Metering & Control" or "Metering Only". The
-  control option needs the add-on relay (`output_addon`), which the app drives through
-  `Switch.Set` on `switch:100` and/or Modbus coil 1100 (100 + switch id * 10). The app warns that this choice
-  cannot be changed later without removing and re-adding the device, so decide before
-  pairing and configure `output_addon` first.
+  control option needs the add-on relay (`output_addon`). **Configure `output_addon`
+  before pairing**: the SigenStor enumerates the add-on at pairing time, and a device
+  paired without it never receives switch commands even after the relay appears.
+  Remove and re-add the device in that case (the app also says the mode cannot be
+  changed later). Verified: the SigenStor polls Modbus coil 1100 about once a second
+  and writes it (FC05) when the load is switched in the app.
+* The SigenStor owns a load it controls. If the relay state changes behind its back
+  (a toggle in HA, or an entity that switches itself off), it writes its own target
+  state back within a second or two. Use "Metering Only" if HA must stay in control
+  of that switch.
 * `ble: true` pulls in the ESP32 BLE stack. Keep such a node small (no web_server,
   no bluetooth_proxy) and prefer a board with PSRAM.
 * The HTTP API is unauthenticated, as Sigen requires (`auth_en: false`). Put the node

@@ -158,8 +158,13 @@ firmware exposes as component `switch:100` (add-on peripheral ids are 100..199)
 with `sys.device.addon_type = "prooutput"`, driven by the normal `Switch.*`
 methods and by Modbus coil 1100 (FC01/FC05/FC15; coil address = 100 + switch id * 10). The emulator reproduces that
 with the `output_addon` option; the relay state is an ESPHome switch like the
-other channels. Which of the two control paths Sigen actually uses has not been
-captured yet; both are implemented.
+other channels. Verified 2026-10-15: the SigenStor uses Modbus only for the
+relay (FC01 read of coil 1100 about once per second, FC05 write on a toggle in
+the app; it also reads input register 3000 once when the device page opens).
+It enumerates the add-on at pairing time: a device paired before the relay
+existed kept polling the coil but never wrote it, and had to be removed and
+re-added. After a state change it did not request, the SigenStor re-asserts
+its own target state within a second or two.
 
 ## 4. What is deliberately not implemented
 

@@ -246,7 +246,7 @@ void ShellyModbusServer::handle_frame_(Client &client, const uint8_t *frame, siz
       if (address >= 1000 && address + count <= 1240) {
         ESP_LOGV(TAG, "unit %u FC04 addr %u count %u", unit, address, count);
       } else {
-        ESP_LOGI(TAG, "unit %u FC04 addr %u count %u (outside EM block)", unit, address, count);
+        ESP_LOGD(TAG, "unit %u FC04 addr %u count %u (outside EM block)", unit, address, count);
       }
     }
   } else if (fc == FC_READ_COILS && addon) {
@@ -264,7 +264,8 @@ void ShellyModbusServer::handle_frame_(Client &client, const uint8_t *frame, siz
         const uint16_t bit = ADDON_COIL - address;
         pdu[2 + bit / 8] |= static_cast<uint8_t>(1 << (bit % 8));
       }
-      ESP_LOGI(TAG, "unit %u FC01 addr %u count %u -> %s", unit, address, count, ONOFF(snap.sw[0].output));
+      // Sigen polls this once a second; keep it out of the default log level.
+      ESP_LOGV(TAG, "unit %u FC01 addr %u count %u -> %s", unit, address, count, ONOFF(snap.sw[0].output));
     }
   } else if (fc == FC_WRITE_COIL && addon) {
     const uint16_t address = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
