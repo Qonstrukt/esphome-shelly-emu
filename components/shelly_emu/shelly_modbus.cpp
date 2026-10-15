@@ -18,8 +18,9 @@ static constexpr uint8_t FC_READ_HOLDING = 0x03;
 static constexpr uint8_t FC_READ_INPUT = 0x04;
 static constexpr uint8_t FC_WRITE_COIL = 0x05;
 static constexpr uint8_t FC_WRITE_COILS = 0x0F;
-// Pro Output Add-on relay (switch:100): coil 100, plus the generic Switch input-register block.
-static constexpr uint16_t ADDON_COIL = 100;
+// Pro Output Add-on relay (switch:100). Shelly: coil_address = 100 + switch_id * 10 = 1100,
+// plus the generic Switch input-register block (first switch component: docs 33000).
+static constexpr uint16_t ADDON_COIL = 1100;
 static constexpr uint16_t ADDON_SWITCH_REG = 3000;  // docs 33000
 static constexpr uint8_t EX_ILLEGAL_FUNCTION = 0x01;
 static constexpr uint8_t EX_ILLEGAL_ADDRESS = 0x02;

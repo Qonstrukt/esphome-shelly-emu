@@ -154,7 +154,7 @@ Notes:
   independently controlled loads on one board, or one board per device.
 * When mySigen pairs a Pro 3EM it asks "Metering & Control" or "Metering Only". The
   control option needs the add-on relay (`output_addon`), which the app drives through
-  `Switch.Set` on `switch:100` and/or Modbus coil 100. The app warns that this choice
+  `Switch.Set` on `switch:100` and/or Modbus coil 1100 (100 + switch id * 10). The app warns that this choice
   cannot be changed later without removing and re-adding the device, so decide before
   pairing and configure `output_addon` first.
 * `ble: true` pulls in the ESP32 BLE stack. Keep such a node small (no web_server,

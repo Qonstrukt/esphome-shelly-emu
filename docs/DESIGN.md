@@ -156,7 +156,7 @@ add-on component") or "Metering Only", and the choice is final for that pairing.
 The hardware behind it is the Shelly Pro Output Add-on: a relay that the Shelly
 firmware exposes as component `switch:100` (add-on peripheral ids are 100..199)
 with `sys.device.addon_type = "prooutput"`, driven by the normal `Switch.*`
-methods and by Modbus coil 100 (FC01/FC05/FC15). The emulator reproduces that
+methods and by Modbus coil 1100 (FC01/FC05/FC15; coil address = 100 + switch id * 10). The emulator reproduces that
 with the `output_addon` option; the relay state is an ESPHome switch like the
 other channels. Which of the two control paths Sigen actually uses has not been
 captured yet; both are implemented.
