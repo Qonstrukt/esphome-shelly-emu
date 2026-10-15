@@ -164,10 +164,10 @@ void ShellyModbusServer::loop() {
   if (this->listen_ == nullptr)
     return;
   this->accept_();
-  const uint32_t now = millis();
   for (auto it = this->clients_.begin(); it != this->clients_.end();) {
     bool keep = this->service_client_(*it);
-    if (keep && now - it->last_activity > CLIENT_TIMEOUT_MS) {
+    // Evaluate idleness after servicing: last_activity may have just been refreshed.
+    if (keep && millis() - it->last_activity > CLIENT_TIMEOUT_MS) {
       ESP_LOGD(TAG, "Client idle, closing");
       keep = false;
     }
