@@ -1,0 +1,73 @@
+# Emulates a Shelly Pro 3EM three-phase meter. Sigenergy reads it over Modbus TCP
+# (port 502) after pairing; HTTP/mDNS are used for discovery. Phase data comes from
+# Home Assistant (for example a DSMR / P1 reader or another meter).
+substitutions:
+  name: shelly-emu-3em
+
+esphome:
+  name: ${name}
+  friendly_name: Shelly emu Pro 3EM
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+logger:
+
+api:
+
+ota:
+  - platform: esphome
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [shelly_emu]
+
+sensor:
+  - platform: homeassistant
+    id: p1_power_l1
+    entity_id: sensor.p1_power_l1
+  - platform: homeassistant
+    id: p1_power_l2
+    entity_id: sensor.p1_power_l2
+  - platform: homeassistant
+    id: p1_power_l3
+    entity_id: sensor.p1_power_l3
+  - platform: homeassistant
+    id: p1_voltage_l1
+    entity_id: sensor.p1_voltage_l1
+  - platform: homeassistant
+    id: p1_voltage_l2
+    entity_id: sensor.p1_voltage_l2
+  - platform: homeassistant
+    id: p1_voltage_l3
+    entity_id: sensor.p1_voltage_l3
+  - platform: homeassistant
+    id: p1_energy_import
+    entity_id: sensor.p1_energy_import
+  - platform: homeassistant
+    id: p1_energy_export
+    entity_id: sensor.p1_energy_export
+
+shelly_emu:
+  model: pro3em
+  name: "Grid meter"
+  # modbus: true is the default for pro3em
+  em:
+    energy_unit: kWh
+    phases:
+      - power: p1_power_l1          # W, negative = export
+        voltage: p1_voltage_l1
+        energy: p1_energy_import    # whole-house counters on phase a is fine for Sigen totals
+        energy_returned: p1_energy_export
+      - power: p1_power_l2
+        voltage: p1_voltage_l2
+      - power: p1_power_l3
+        voltage: p1_voltage_l3

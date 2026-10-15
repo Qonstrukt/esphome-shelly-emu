@@ -1,0 +1,31 @@
+esphome:
+  name: shelly-emu-test-ble
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+wifi:
+  ssid: "testnet"
+  password: "testpassword"
+logger:
+api:
+  homeassistant_services: true
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [shelly_emu]
+switch:
+  - platform: homeassistant
+    id: ha_sw0
+    entity_id: switch.test0
+sensor:
+  - platform: homeassistant
+    id: ha_p0
+    entity_id: sensor.test_power0
+shelly_emu:
+  model: plusplugs
+  ble: true
+  switches:
+    - switch: ha_sw0
+      power: ha_p0

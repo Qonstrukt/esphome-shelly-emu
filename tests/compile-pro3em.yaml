@@ -1,0 +1,33 @@
+esphome:
+  name: shelly-emu-test-3em
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+wifi:
+  ssid: "testnet"
+  password: "testpassword"
+logger:
+api:
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [shelly_emu]
+sensor:
+  - platform: homeassistant
+    id: p_l1
+    entity_id: sensor.p_l1
+  - platform: homeassistant
+    id: p_l2
+    entity_id: sensor.p_l2
+  - platform: homeassistant
+    id: p_l3
+    entity_id: sensor.p_l3
+shelly_emu:
+  model: pro3em
+  em:
+    phases:
+      - power: p_l1
+      - power: p_l2
+      - power: p_l3

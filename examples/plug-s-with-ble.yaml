@@ -1,0 +1,54 @@
+# Emulates a Shelly Plus Plug S (one channel) and also exposes the Shelly BLE RPC
+# service, so the "Bluetooth" option in mySigen can find it as a factory-fresh plug.
+# BLE + Wi-Fi + HTTP needs a fair amount of RAM: keep the rest of the config small.
+substitutions:
+  name: shelly-emu-plug
+
+esphome:
+  name: ${name}
+  friendly_name: Shelly emu Plug S
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+logger:
+
+api:
+  homeassistant_services: true
+
+ota:
+  - platform: esphome
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [shelly_emu]
+
+switch:
+  - platform: homeassistant
+    id: ha_plug
+    entity_id: switch.dishwasher_plug
+
+sensor:
+  - platform: homeassistant
+    id: ha_plug_power
+    entity_id: sensor.dishwasher_plug_power
+
+shelly_emu:
+  model: plusplugs
+  name: "Dishwasher"
+  ble: true
+  # What the app sees in Shelly.GetDeviceInfo over BLE. "pending" makes it look like a
+  # device that still needs Wi-Fi provisioning (the only case mySigen uses BLE for).
+  ble_provision_state: pending
+  switches:
+    - switch: ha_plug
+      name: "Dishwasher"
+      power: ha_plug_power
