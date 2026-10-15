@@ -30,6 +30,13 @@ external_components:
       path: ../components
     components: [shelly_emu]
 
+switch:
+  # Optional: the relay of the Shelly Pro Output Add-on, lets mySigen use the meter
+  # in "Metering & Control" mode and switch an appliance.
+  - platform: homeassistant
+    id: ha_boiler
+    entity_id: switch.boiler
+
 sensor:
   - platform: homeassistant
     id: p1_power_l1
@@ -60,6 +67,9 @@ shelly_emu:
   model: pro3em
   name: "Grid meter"
   # modbus: true is the default for pro3em
+  output_addon:
+    switch: ha_boiler
+    name: "Boiler"
   em:
     energy_unit: kWh
     phases:

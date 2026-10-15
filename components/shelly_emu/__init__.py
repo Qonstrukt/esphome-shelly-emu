@@ -46,6 +46,7 @@ CONF_ENERGY_RETURNED = "energy_returned"
 CONF_APPARENT_POWER = "apparent_power"
 CONF_NEUTRAL_CURRENT = "neutral_current"
 CONF_ENERGY_UNIT = "energy_unit"
+CONF_OUTPUT_ADDON = "output_addon"
 
 shelly_emu_ns = cg.esphome_ns.namespace("shelly_emu")
 ShellyEmu = shelly_emu_ns.class_("ShellyEmu", cg.Component)
@@ -115,6 +116,13 @@ PHASE_SCHEMA = cv.Schema(
     {cv.Optional(key): cv.use_id(sensor.Sensor) for key in PHASE_SENSOR_SETTERS}
 )
 
+OUTPUT_ADDON_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_SWITCH): cv.use_id(switch.Switch),
+        cv.Optional(CONF_NAME): cv.string,
+    }
+)
+
 EM_SCHEMA = cv.Schema(
     {
         cv.Required(CONF_PHASES): cv.All(
@@ -133,10 +141,14 @@ def _validate_model(config: ConfigType) -> ConfigType:
         if CONF_EM not in config:
             raise cv.Invalid(f"model '{config[CONF_MODEL]}' requires an 'em' section")
         if config[CONF_SWITCHES]:
-            raise cv.Invalid(f"model '{config[CONF_MODEL]}' has no switch channels")
+            raise cv.Invalid(
+                f"model '{config[CONF_MODEL]}' has no switch channels; use 'output_addon' for the Pro Output Add-on relay"
+            )
     else:
         if CONF_EM in config:
             raise cv.Invalid(f"model '{config[CONF_MODEL]}' is not an energy meter")
+        if CONF_OUTPUT_ADDON in config:
+            raise cv.Invalid("'output_addon' is only available for model 'pro3em'")
         if not config[CONF_SWITCHES]:
             raise cv.Invalid("at least one entry in 'switches' is required")
         if len(config[CONF_SWITCHES]) > channels:
@@ -194,6 +206,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_MODBUS_PORT, default=502): cv.port,
             cv.Optional(CONF_SWITCHES, default=[]): cv.ensure_list(SWITCH_SCHEMA),
             cv.Optional(CONF_EM): EM_SCHEMA,
+            cv.Optional(CONF_OUTPUT_ADDON): OUTPUT_ADDON_SCHEMA,
         }
     ).extend(cv.COMPONENT_SCHEMA),
     _validate_model,
@@ -245,6 +258,12 @@ async def to_code(config: ConfigType) -> None:
             sens = await cg.get_variable(em[CONF_TEMPERATURE])
             cg.add(var.set_em_temperature(sens))
         cg.add(var.set_em_energy_scale(ENERGY_UNITS[em[CONF_ENERGY_UNIT]]))
+
+    if CONF_OUTPUT_ADDON in config:
+        addon = config[CONF_OUTPUT_ADDON]
+        sw = await cg.get_variable(addon[CONF_SWITCH])
+        cg.add(var.add_switch_channel(sw, addon.get(CONF_NAME, "")))
+        cg.add(var.set_output_addon(True))
 
     if config[CONF_BLE]:
         from esphome.components import esp32_ble

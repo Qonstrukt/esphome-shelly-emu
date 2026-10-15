@@ -14,6 +14,10 @@ external_components:
       type: local
       path: ../components
     components: [shelly_emu]
+switch:
+  - platform: homeassistant
+    id: ha_relay
+    entity_id: switch.test_relay
 sensor:
   - platform: homeassistant
     id: p_l1
@@ -26,6 +30,9 @@ sensor:
     entity_id: sensor.p_l3
 shelly_emu:
   model: pro3em
+  output_addon:
+    switch: ha_relay
+    name: "Boiler"
   em:
     phases:
       - power: p_l1

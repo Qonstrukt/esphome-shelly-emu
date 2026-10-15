@@ -37,6 +37,13 @@ void ShellyEmu::add_switch_channel(switch_::Switch *sw, const char *name) {
   ch.name = name != nullptr ? name : "";
 }
 
+int ShellyEmu::switch_index_for_id(int id) const {
+  const int index = this->output_addon_ ? id - 100 : id;
+  if (index < 0 || index >= this->switch_count_)
+    return -1;
+  return index;
+}
+
 void ShellyEmu::build_identity_() {
   uint8_t mac[6] = {0};
   bool have_mac = false;
@@ -115,8 +122,9 @@ void ShellyEmu::dump_config() {
                 this->base_->get_port());
   for (uint8_t i = 0; i < this->switch_count_; i++) {
     const auto &ch = this->channels_[i];
-    ESP_LOGCONFIG(TAG, "  switch:%u '%s' power=%s energy=%s", i, ch.name, YESNO(ch.power != nullptr),
-                  ch.energy != nullptr ? "sensor" : "integrated");
+    ESP_LOGCONFIG(TAG, "  switch:%d '%s' power=%s energy=%s%s", this->switch_component_id(i), ch.name,
+                  YESNO(ch.power != nullptr), ch.energy != nullptr ? "sensor" : "integrated",
+                  this->output_addon_ ? " (Pro Output Add-on)" : "");
   }
   if (this->is_meter()) {
     for (uint8_t p = 0; p < EM_PHASES; p++) {

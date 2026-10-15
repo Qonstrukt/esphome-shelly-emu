@@ -128,6 +128,10 @@ shelly_emu:
       temperature: ...                # °C (optional)
       input: some_binary_sensor       # optional, reported as input:N
 
+  output_addon:              # pro3em only: emulate the Shelly Pro Output Add-on relay
+    switch: ha_boiler        #   exposed as switch:100; needed for "Metering & Control" in mySigen
+    name: "Boiler"
+
   em:                        # pro3em only
     energy_unit: kWh
     neutral_current: ...     # optional
@@ -148,6 +152,11 @@ Notes:
 * One ESP32 emulates **one** Shelly device. Sigen identifies devices by IP address, so
   several independent Shellys would need several IPs. Use `pro4pm` for up to four
   independently controlled loads on one board, or one board per device.
+* When mySigen pairs a Pro 3EM it asks "Metering & Control" or "Metering Only". The
+  control option needs the add-on relay (`output_addon`), which the app drives through
+  `Switch.Set` on `switch:100` and/or Modbus coil 100. The app warns that this choice
+  cannot be changed later without removing and re-adding the device, so decide before
+  pairing and configure `output_addon` first.
 * `ble: true` pulls in the ESP32 BLE stack. Keep such a node small (no web_server,
   no bluetooth_proxy) and prefer a board with PSRAM.
 * The HTTP API is unauthenticated, as Sigen requires (`auth_en: false`). Put the node

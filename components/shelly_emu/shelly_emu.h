@@ -132,6 +132,8 @@ class ShellyEmu : public Component {
   void set_mac_override(const char *mac) { this->mac_override_ = mac; }
 
   void add_switch_channel(switch_::Switch *sw, const char *name);
+  /// Pro 3EM with the Shelly Pro Output Add-on: channel 0 is exposed as switch:100.
+  void set_output_addon(bool enabled) { this->output_addon_ = enabled; }
   void set_switch_power(uint8_t ch, sensor::Sensor *s) { this->channels_[ch].power = s; }
   void set_switch_voltage(uint8_t ch, sensor::Sensor *s) { this->channels_[ch].voltage = s; }
   void set_switch_current(uint8_t ch, sensor::Sensor *s) { this->channels_[ch].current = s; }
@@ -182,6 +184,11 @@ class ShellyEmu : public Component {
   DeviceKind get_kind() const { return this->kind_; }
   bool is_meter() const { return this->kind_ == DeviceKind::ENERGY_METER; }
   uint8_t get_switch_count() const { return this->switch_count_; }
+  bool has_output_addon() const { return this->output_addon_ && this->switch_count_ > 0; }
+  /// Shelly component id of channel `index` (0..n for switch devices, 100 for the add-on relay).
+  int switch_component_id(uint8_t index) const { return this->output_addon_ ? 100 + index : index; }
+  /// Channel index for a Shelly switch id, or -1 if the id does not exist.
+  int switch_index_for_id(int id) const;
   const char *get_ble_provision_state() const {
 #ifdef USE_SHELLY_EMU_BLE
     return this->ble_provision_state_;
@@ -204,8 +211,8 @@ class ShellyEmu : public Component {
   friend class ShellyModbusServer;
 
   // builders (shelly_rpc.cpp)
-  void build_switch_status_(JsonObject o, uint8_t id, const SwitchState &s);
-  void build_switch_config_(JsonObject o, uint8_t id);
+  void build_switch_status_(JsonObject o, uint8_t index, const SwitchState &s);
+  void build_switch_config_(JsonObject o, uint8_t index);
   void build_input_status_(JsonObject o, uint8_t id, const SwitchState &s);
   void build_input_config_(JsonObject o, uint8_t id);
   void build_em_status_(JsonObject o, const EmState &em);
@@ -267,6 +274,7 @@ class ShellyEmu : public Component {
 
   std::array<SwitchChannel, MAX_SWITCHES> channels_{};
   uint8_t switch_count_{0};
+  bool output_addon_{false};
   std::array<EmPhaseSensors, EM_PHASES> em_phases_{};
   sensor::Sensor *em_neutral_current_{nullptr};
   sensor::Sensor *em_temperature_{nullptr};

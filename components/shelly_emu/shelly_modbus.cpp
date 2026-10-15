@@ -13,8 +13,14 @@ static const char *const TAG = "shelly_emu.modbus";
 
 static constexpr size_t MAX_CLIENTS = 4;
 static constexpr uint32_t CLIENT_TIMEOUT_MS = 120000;
+static constexpr uint8_t FC_READ_COILS = 0x01;
 static constexpr uint8_t FC_READ_HOLDING = 0x03;
 static constexpr uint8_t FC_READ_INPUT = 0x04;
+static constexpr uint8_t FC_WRITE_COIL = 0x05;
+static constexpr uint8_t FC_WRITE_COILS = 0x0F;
+// Pro Output Add-on relay (switch:100): coil 100, plus the generic Switch input-register block.
+static constexpr uint16_t ADDON_COIL = 100;
+static constexpr uint16_t ADDON_SWITCH_REG = 3000;  // docs 33000
 static constexpr uint8_t EX_ILLEGAL_FUNCTION = 0x01;
 static constexpr uint8_t EX_ILLEGAL_ADDRESS = 0x02;
 
@@ -80,6 +86,10 @@ void ShellyModbusServer::build_register_map_(std::map<uint16_t, uint16_t> &regs)
     regs[base + 11] = 0;
     regs[base + 12] = 0;
     put_float(regs, base + 13, p.freq);
+  }
+
+  if (this->emu_->has_output_addon()) {
+    regs[ADDON_SWITCH_REG] = snap.sw[0].output ? 1 : 0;
   }
 
   // EMData (docs: 31160+, on the wire 1160+)
@@ -203,15 +213,18 @@ void ShellyModbusServer::handle_frame_(Client &client, const uint8_t *frame, siz
   const uint8_t unit = frame[6];
   const uint8_t fc = frame[7];
   std::vector<uint8_t> pdu;
+  const bool addon = this->emu_->has_output_addon();
 
-  if ((fc != FC_READ_HOLDING && fc != FC_READ_INPUT) || len < 12) {
-    pdu = {static_cast<uint8_t>(fc | 0x80), EX_ILLEGAL_FUNCTION};
-  } else {
+  auto exception = [&pdu, fc](uint8_t code) { pdu = {static_cast<uint8_t>(fc | 0x80), code}; };
+
+  if (len < 12) {
+    exception(EX_ILLEGAL_FUNCTION);
+  } else if (fc == FC_READ_INPUT || fc == FC_READ_HOLDING) {
     const uint16_t address = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
     const uint16_t count = (static_cast<uint16_t>(frame[10]) << 8) | frame[11];
     if (count < 1 || count > 125 || fc == FC_READ_HOLDING) {
       // A real Pro 3EM answers holding-register reads with "illegal data address".
-      pdu = {static_cast<uint8_t>(fc | 0x80), EX_ILLEGAL_ADDRESS};
+      exception(EX_ILLEGAL_ADDRESS);
     } else {
       std::map<uint16_t, uint16_t> regs;
       this->build_register_map_(regs);
@@ -226,6 +239,50 @@ void ShellyModbusServer::handle_frame_(Client &client, const uint8_t *frame, siz
       }
       ESP_LOGV(TAG, "unit %u FC%02X addr %u count %u", unit, fc, address, count);
     }
+  } else if (fc == FC_READ_COILS && addon) {
+    const uint16_t address = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
+    const uint16_t count = (static_cast<uint16_t>(frame[10]) << 8) | frame[11];
+    if (count < 1 || count > 2000 || address > ADDON_COIL || address + count <= ADDON_COIL) {
+      exception(EX_ILLEGAL_ADDRESS);
+    } else {
+      const Snapshot snap = this->emu_->get_snapshot();
+      const uint8_t n_bytes = (count + 7) / 8;
+      pdu.assign(2 + n_bytes, 0);
+      pdu[0] = fc;
+      pdu[1] = n_bytes;
+      if (snap.sw[0].output) {
+        const uint16_t bit = ADDON_COIL - address;
+        pdu[2 + bit / 8] |= static_cast<uint8_t>(1 << (bit % 8));
+      }
+      ESP_LOGV(TAG, "unit %u FC01 addr %u count %u -> %s", unit, address, count, ONOFF(snap.sw[0].output));
+    }
+  } else if (fc == FC_WRITE_COIL && addon) {
+    const uint16_t address = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
+    const uint16_t value = (static_cast<uint16_t>(frame[10]) << 8) | frame[11];
+    if (address != ADDON_COIL) {
+      exception(EX_ILLEGAL_ADDRESS);
+    } else if (value != 0xFF00 && value != 0x0000) {
+      exception(0x03);  // illegal data value
+    } else {
+      bool was_on = false;
+      this->emu_->request_switch(0, value == 0xFF00, was_on);
+      ESP_LOGI(TAG, "Modbus coil %u <- %s", address, ONOFF(value == 0xFF00));
+      pdu.assign(frame + 7, frame + 12);  // echo request
+    }
+  } else if (fc == FC_WRITE_COILS && addon) {
+    const uint16_t address = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
+    const uint16_t count = (static_cast<uint16_t>(frame[10]) << 8) | frame[11];
+    if (address != ADDON_COIL || count != 1 || len < 14) {
+      exception(EX_ILLEGAL_ADDRESS);
+    } else {
+      bool was_on = false;
+      const bool on = (frame[13] & 0x01) != 0;
+      this->emu_->request_switch(0, on, was_on);
+      ESP_LOGI(TAG, "Modbus coils %u <- %s", address, ONOFF(on));
+      pdu.assign(frame + 7, frame + 12);
+    }
+  } else {
+    exception(EX_ILLEGAL_FUNCTION);
   }
 
   std::vector<uint8_t> resp;

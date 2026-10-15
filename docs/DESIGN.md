@@ -149,6 +149,18 @@ Floats are IEEE-754 single with the two 16-bit words swapped (CDAB), same
 as a real Pro 3EM. FC03 (holding) returns *illegal data address* like the
 real device; only FC04 is served. Any unit id is accepted.
 
+### Pro Output Add-on (pro3em "Metering & Control")
+
+When mySigen pairs a Pro 3EM it offers "Metering & Control" (needs "a compatible
+add-on component") or "Metering Only", and the choice is final for that pairing.
+The hardware behind it is the Shelly Pro Output Add-on: a relay that the Shelly
+firmware exposes as component `switch:100` (add-on peripheral ids are 100..199)
+with `sys.device.addon_type = "prooutput"`, driven by the normal `Switch.*`
+methods and by Modbus coil 100 (FC01/FC05/FC15). The emulator reproduces that
+with the `output_addon` option; the relay state is an ESPHome switch like the
+other channels. Which of the two control paths Sigen actually uses has not been
+captured yet; both are implemented.
+
 ## 4. What is deliberately not implemented
 
 * Shelly Cloud, MQTT, outbound WebSocket, scripts, schedules, webhooks, KVS,

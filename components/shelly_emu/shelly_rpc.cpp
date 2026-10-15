@@ -72,9 +72,17 @@ int ShellyEmu::param_id_(JsonVariantConst params) {
 // Switch / Input components
 // ---------------------------------------------------------------------------
 
-void ShellyEmu::build_switch_status_(JsonObject o, uint8_t id, const SwitchState &s) {
-  o["id"] = id;
+void ShellyEmu::build_switch_status_(JsonObject o, uint8_t index, const SwitchState &s) {
+  o["id"] = this->switch_component_id(index);
   o["source"] = "init";
+  if (this->output_addon_) {
+    // Pro Output Add-on relay: no power metering, just the output state.
+    o["output"] = s.output;
+    JsonObject t = o["temperature"].to<JsonObject>();
+    t["tC"] = std::isnan(s.temp) ? 0.0 : r1(s.temp);
+    t["tF"] = std::isnan(s.temp) ? 32.0 : r1(s.temp * 9.0 / 5.0 + 32.0);
+    return;
+  }
   o["tag"] = nullptr;
   o["output"] = s.output;
   o["apower"] = r1(s.apower);
@@ -113,13 +121,21 @@ void ShellyEmu::build_switch_status_(JsonObject o, uint8_t id, const SwitchState
   }
 }
 
-void ShellyEmu::build_switch_config_(JsonObject o, uint8_t id) {
-  o["id"] = id;
-  const char *name = id < this->switch_count_ ? this->channels_[id].name : "";
+void ShellyEmu::build_switch_config_(JsonObject o, uint8_t index) {
+  o["id"] = this->switch_component_id(index);
+  const char *name = index < this->switch_count_ ? this->channels_[index].name : "";
   if (name != nullptr && name[0] != '\0') {
     o["name"] = name;
   } else {
     o["name"] = nullptr;
+  }
+  if (this->output_addon_) {
+    o["initial_state"] = "restore_last";
+    o["auto_on"] = false;
+    o["auto_on_delay"] = 60.0;
+    o["auto_off"] = false;
+    o["auto_off_delay"] = 60.0;
+    return;
   }
   o["in_mode"] = "detached";
   o["in_locked"] = false;
@@ -295,7 +311,11 @@ void ShellyEmu::build_sys_config_(JsonObject o) {
   } else if (strcmp(this->app_, "Pro2PM") == 0 || strcmp(this->app_, "Plus2PM") == 0) {
     dev["profile"] = "switch";
   }
-  dev["addon_type"] = nullptr;
+  if (this->has_output_addon()) {
+    dev["addon_type"] = "prooutput";
+  } else {
+    dev["addon_type"] = nullptr;
+  }
   dev["sys_btn_toggle"] = false;
   dev["tls_check_cert_validity_time"] = true;
   dev["enhanced_security"] = false;
@@ -528,10 +548,8 @@ void ShellyEmu::component_keys_(std::vector<std::string> &keys) {
   if (this->is_meter())
     keys.emplace_back("modbus");
   keys.emplace_back("mqtt");
-  if (!this->is_meter()) {
-    for (uint8_t i = 0; i < this->switch_count_; i++)
-      keys.emplace_back("switch:" + std::to_string(i));
-  }
+  for (uint8_t i = 0; i < this->switch_count_; i++)
+    keys.emplace_back("switch:" + std::to_string(this->switch_component_id(i)));
   keys.emplace_back("sys");
   if (this->is_meter())
     keys.emplace_back("temperature:0");
@@ -558,8 +576,10 @@ bool ShellyEmu::component_status_(const std::string &key, JsonObject o, const Sn
   } else if (key == "mqtt") {
     this->build_mqtt_status_(o);
   } else if (key.rfind("switch:", 0) == 0) {
-    const int id = atoi(key.c_str() + 7);
-    this->build_switch_status_(o, id, snap.sw[id]);
+    const int index = this->switch_index_for_id(atoi(key.c_str() + 7));
+    if (index < 0)
+      return false;
+    this->build_switch_status_(o, index, snap.sw[index]);
   } else if (key == "sys") {
     this->build_sys_status_(o);
   } else if (key == "temperature:0") {
@@ -594,7 +614,10 @@ bool ShellyEmu::component_config_(const std::string &key, JsonObject o) {
   } else if (key == "mqtt") {
     this->build_mqtt_config_(o);
   } else if (key.rfind("switch:", 0) == 0) {
-    this->build_switch_config_(o, atoi(key.c_str() + 7));
+    const int index = this->switch_index_for_id(atoi(key.c_str() + 7));
+    if (index < 0)
+      return false;
+    this->build_switch_config_(o, index);
   } else if (key == "sys") {
     this->build_sys_config_(o);
   } else if (key == "temperature:0") {
@@ -681,6 +704,12 @@ void ShellyEmu::build_list_methods_(JsonObject o) {
     for (const char *name : {"EM.GetStatus", "EM.GetConfig", "EMData.GetStatus", "EMData.GetConfig",
                              "Temperature.GetStatus", "Temperature.GetConfig", "Modbus.GetStatus", "Modbus.GetConfig"})
       m.add(name);
+    if (this->has_output_addon()) {
+      for (const char *name : {"Switch.GetStatus", "Switch.GetConfig", "Switch.SetConfig", "Switch.Set", "Switch.Toggle",
+                               "ProOutputAddon.GetPeripherals", "ProOutputAddon.AddPeripheral",
+                               "ProOutputAddon.RemovePeripheral"})
+        m.add(name);
+    }
   } else {
     for (const char *name : {"Switch.GetStatus", "Switch.GetConfig", "Switch.SetConfig", "Switch.Set", "Switch.Toggle",
                              "Switch.ResetCounters", "Input.GetStatus", "Input.GetConfig", "Input.SetConfig"})
@@ -812,13 +841,23 @@ RpcError ShellyEmu::rpc_call(const char *method, JsonVariantConst params, JsonDo
     o["rev"] = 0;
   }
   // ---- Switch / Input ----
-  else if (starts("Switch.") || starts("Input.")) {
-    if (this->is_meter())
+  else if (is("ProOutputAddon.GetPeripherals")) {
+    if (!this->has_output_addon())
       return RpcError::method_not_found();
-    const int id = param_id_(params);
-    if (id < 0 || id >= this->switch_count_)
+    JsonObject dout = o["digital_out"].to<JsonObject>();
+    for (uint8_t i = 0; i < this->switch_count_; i++)
+      dout["switch:" + std::to_string(this->switch_component_id(i))].to<JsonObject>();
+  } else if (is("ProOutputAddon.AddPeripheral") || is("ProOutputAddon.RemovePeripheral")) {
+    if (!this->has_output_addon())
+      return RpcError::method_not_found();
+    return {-108, "Peripheral configuration is fixed on this device"};
+  } else if (starts("Switch.") || starts("Input.")) {
+    if (this->is_meter() && (!this->has_output_addon() || starts("Input.")))
+      return RpcError::method_not_found();
+    const int index = this->switch_index_for_id(param_id_(params));
+    if (index < 0)
       return RpcError::invalid_argument("id");
-    const auto cid = static_cast<uint8_t>(id);
+    const auto cid = static_cast<uint8_t>(index);
     if (is("Switch.GetStatus")) {
       this->build_switch_status_(o, cid, snap.sw[cid]);
     } else if (is("Switch.GetConfig")) {
