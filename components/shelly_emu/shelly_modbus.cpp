@@ -215,7 +215,12 @@ void ShellyModbusServer::handle_frame_(Client &client, const uint8_t *frame, siz
   std::vector<uint8_t> pdu;
   const bool addon = this->emu_->has_output_addon();
 
-  auto exception = [&pdu, fc](uint8_t code) { pdu = {static_cast<uint8_t>(fc | 0x80), code}; };
+  auto exception = [&pdu, fc, unit, frame, len](uint8_t code) {
+    pdu = {static_cast<uint8_t>(fc | 0x80), code};
+    const uint16_t a = len >= 10 ? (static_cast<uint16_t>(frame[8]) << 8) | frame[9] : 0;
+    const uint16_t v = len >= 12 ? (static_cast<uint16_t>(frame[10]) << 8) | frame[11] : 0;
+    ESP_LOGW(TAG, "Rejected request: unit %u FC%02X addr %u value/count %u (exception %u)", unit, fc, a, v, code);
+  };
 
   if (len < 12) {
     exception(EX_ILLEGAL_FUNCTION);
@@ -237,7 +242,11 @@ void ShellyModbusServer::handle_frame_(Client &client, const uint8_t *frame, siz
         pdu.push_back(static_cast<uint8_t>(v >> 8));
         pdu.push_back(static_cast<uint8_t>(v & 0xFF));
       }
-      ESP_LOGV(TAG, "unit %u FC%02X addr %u count %u", unit, fc, address, count);
+      if (address >= 1000 && address + count <= 1240) {
+        ESP_LOGV(TAG, "unit %u FC04 addr %u count %u", unit, address, count);
+      } else {
+        ESP_LOGI(TAG, "unit %u FC04 addr %u count %u (outside EM block)", unit, address, count);
+      }
     }
   } else if (fc == FC_READ_COILS && addon) {
     const uint16_t address = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
@@ -254,7 +263,7 @@ void ShellyModbusServer::handle_frame_(Client &client, const uint8_t *frame, siz
         const uint16_t bit = ADDON_COIL - address;
         pdu[2 + bit / 8] |= static_cast<uint8_t>(1 << (bit % 8));
       }
-      ESP_LOGV(TAG, "unit %u FC01 addr %u count %u -> %s", unit, address, count, ONOFF(snap.sw[0].output));
+      ESP_LOGI(TAG, "unit %u FC01 addr %u count %u -> %s", unit, address, count, ONOFF(snap.sw[0].output));
     }
   } else if (fc == FC_WRITE_COIL && addon) {
     const uint16_t address = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];

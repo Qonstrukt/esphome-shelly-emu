@@ -104,10 +104,15 @@ static std::string request_url(AsyncWebServerRequest *request) {
 }
 
 bool ShellyHttpHandler::canHandle(AsyncWebServerRequest *request) const {
-  if (request->method() != HTTP_GET && request->method() != HTTP_POST)
-    return false;
   const std::string url = request_url(request);
-  return url == "/shelly" || url == "/rpc" || url.rfind("/rpc/", 0) == 0;
+  const bool ours = url == "/shelly" || url == "/rpc" || url.rfind("/rpc/", 0) == 0;
+  const bool method_ok = request->method() == HTTP_GET || request->method() == HTTP_POST;
+  if (!ours || !method_ok) {
+    // Not a Shelly endpoint we serve: log it so unexpected controller requests become visible.
+    const httpd_req_t *raw = *request;
+    ESP_LOGD(TAG, "Unhandled HTTP request: method %d %s", static_cast<int>(request->method()), raw->uri);
+  }
+  return ours && method_ok;
 }
 
 void ShellyHttpHandler::handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index,
