@@ -170,6 +170,17 @@ Notes:
   on a trusted LAN/VLAN.
 * `*.SetConfig` calls are acknowledged but ignored, except `Sys.SetConfig` device name.
 
+### Diagnostic text sensors
+
+```yaml
+text_sensor:
+  - platform: shelly_emu
+    component_version:       # version of this component, e.g. "1.0.0"
+      name: "Shelly emu version"
+    device_id:               # the emulated Shelly id, e.g. "shellypro4pm-aabbccddeeff"
+      name: "Shelly device id"
+```
+
 ## Testing without a Sigen
 
 ```bash

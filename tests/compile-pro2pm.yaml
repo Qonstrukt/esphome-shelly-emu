@@ -38,3 +38,9 @@ shelly_emu:
       power: ha_p0
       energy: ha_e0
     - switch: ha_sw1
+text_sensor:
+  - platform: shelly_emu
+    component_version:
+      name: "Shelly emu version"
+    device_id:
+      name: "Shelly device id"

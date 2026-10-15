@@ -84,6 +84,13 @@ void ShellyEmu::setup() {
   this->modbus_->setup();
 #endif
 
+#ifdef USE_TEXT_SENSOR
+  if (this->version_text_sensor_ != nullptr)
+    this->version_text_sensor_->publish_state(SHELLY_EMU_VERSION);
+  if (this->device_id_text_sensor_ != nullptr)
+    this->device_id_text_sensor_->publish_state(this->device_id_);
+#endif
+
   this->last_integration_ms_ = millis();
   this->update_snapshot_();
 }
@@ -113,7 +120,7 @@ void ShellyEmu::loop() {
 
 void ShellyEmu::dump_config() {
   ESP_LOGCONFIG(TAG,
-                "Shelly emulator:\n"
+                "Shelly emulator (component version " SHELLY_EMU_VERSION "):\n"
                 "  Model: %s (app %s, fw %s)\n"
                 "  Device id: %s\n"
                 "  Hostname: %s.local\n"

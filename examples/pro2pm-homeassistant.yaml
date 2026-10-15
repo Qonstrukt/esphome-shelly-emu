@@ -69,3 +69,10 @@ shelly_emu:
     - switch: ha_heat_pump
       name: "Heat pump"
       power: ha_heat_pump_power  # no energy sensor: energy is integrated from power
+
+text_sensor:
+  - platform: shelly_emu
+    component_version:
+      name: "Shelly emu version"
+    device_id:
+      name: "Shelly device id"

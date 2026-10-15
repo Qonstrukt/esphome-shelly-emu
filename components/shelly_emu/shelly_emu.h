@@ -13,6 +13,9 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/switch/switch.h"
 #include "esphome/components/web_server_base/web_server_base.h"
+#ifdef USE_TEXT_SENSOR
+#include "esphome/components/text_sensor/text_sensor.h"
+#endif
 #include "esphome/core/component.h"
 #include "esphome/core/helpers.h"
 
@@ -157,6 +160,10 @@ class ShellyEmu : public Component {
   void set_em_temperature(sensor::Sensor *s) { this->em_temperature_ = s; }
   void set_em_energy_scale(float scale) { this->em_energy_scale_ = scale; }
 
+#ifdef USE_TEXT_SENSOR
+  void set_version_text_sensor(text_sensor::TextSensor *s) { this->version_text_sensor_ = s; }
+  void set_device_id_text_sensor(text_sensor::TextSensor *s) { this->device_id_text_sensor_ = s; }
+#endif
 #ifdef USE_SHELLY_EMU_BLE
   void set_ble_server(esp32_ble_server::BLEServer *server) { this->ble_server_ = server; }
   void set_ble_provision_state(const char *state) { this->ble_provision_state_ = state; }
@@ -296,6 +303,10 @@ class ShellyEmu : public Component {
   bool mdns_services_added_{false};
   uint32_t cfg_rev_{1};
 
+#ifdef USE_TEXT_SENSOR
+  text_sensor::TextSensor *version_text_sensor_{nullptr};
+  text_sensor::TextSensor *device_id_text_sensor_{nullptr};
+#endif
 #ifdef USE_SHELLY_EMU_BLE
   esp32_ble_server::BLEServer *ble_server_{nullptr};
   ShellyBleRpc *ble_{nullptr};

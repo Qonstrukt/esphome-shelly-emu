@@ -30,6 +30,8 @@ from esphome.types import ConfigType
 CODEOWNERS = ["@Qonstrukt"]
 DEPENDENCIES = ["esp32", "network"]
 
+__version__ = "1.0.0"
+
 CONF_MAC = "mac"
 CONF_MODEL_CODE = "model_code"
 CONF_FIRMWARE_VERSION = "firmware_version"
@@ -47,6 +49,7 @@ CONF_APPARENT_POWER = "apparent_power"
 CONF_NEUTRAL_CURRENT = "neutral_current"
 CONF_ENERGY_UNIT = "energy_unit"
 CONF_OUTPUT_ADDON = "output_addon"
+CONF_SHELLY_EMU_ID = "shelly_emu_id"
 
 shelly_emu_ns = cg.esphome_ns.namespace("shelly_emu")
 ShellyEmu = shelly_emu_ns.class_("ShellyEmu", cg.Component)
@@ -218,6 +221,7 @@ CONFIG_SCHEMA = cv.All(
 async def to_code(config: ConfigType) -> None:
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
+    cg.add_define("SHELLY_EMU_VERSION", __version__)
 
     base = await cg.get_variable(config[CONF_WEB_SERVER_BASE_ID])
     cg.add(var.set_web_server_base(base))
