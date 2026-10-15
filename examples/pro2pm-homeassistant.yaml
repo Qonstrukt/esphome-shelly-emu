@@ -36,7 +36,7 @@ external_components:
       path: ../components
     components: [shelly_emu]
   # or, from GitHub:
-  # - source: github://Qonstrukt/shelly-emu
+  # - source: github://Qonstrukt/esphome-shelly-emu
   #   components: [shelly_emu]
 
 switch:

@@ -1,4 +1,4 @@
-# shelly-emu: Shelly Gen2 emulator for ESPHome
+# esphome-shelly-emu: Shelly Gen2 emulator for ESPHome
 
 Turn an ESP32 running [ESPHome](https://esphome.io) into a **Shelly Gen2 device** on
 your LAN, with all data and control coming from **Home Assistant**. Built so a
@@ -62,7 +62,7 @@ api:
   homeassistant_services: true   # lets the node call switch.turn_on/off in HA
 
 external_components:
-  - source: github://Qonstrukt/shelly-emu
+  - source: github://Qonstrukt/esphome-shelly-emu
     components: [shelly_emu]
 
 switch:
