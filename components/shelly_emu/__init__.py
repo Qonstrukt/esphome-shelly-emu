@@ -30,7 +30,7 @@ from esphome.types import ConfigType
 CODEOWNERS = ["@Qonstrukt"]
 DEPENDENCIES = ["esp32", "network"]
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 CONF_MAC = "mac"
 CONF_MODEL_CODE = "model_code"
