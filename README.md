@@ -181,6 +181,22 @@ text_sensor:
       name: "Shelly device id"
 ```
 
+## Keeping the device "online" in Sigen
+
+The SigenStor marks a Shelly offline when it stops answering, and an ESP32 in its
+default Wi-Fi power-save mode answers multicast (mDNS) queries unreliably: ping times of
+around 100 ms instead of a few ms are the tell-tale sign. For a node that only exists to
+be polled, disable power saving and give Wi-Fi time to recover before rebooting:
+
+```yaml
+wifi:
+  power_save_mode: none
+  reboot_timeout: 15min   # the default; 2min reboots the node on every longer hiccup
+```
+
+The component itself closes every HTTP connection after the response (like a real
+Shelly) and re-applies the mDNS TTL fix after Wi-Fi reconnects.
+
 ## Testing without a Sigen
 
 ```bash

@@ -345,6 +345,13 @@ void ShellyEmu::mdns_refresh_() {
     return;
   for (size_t i = 0; i < count; i++)
     s_mdns_addresses[i].next = (i + 1 < count) ? &s_mdns_addresses[i + 1] : nullptr;
+  // RFC 6762 requires IP TTL 255 on every mDNS packet. The responder only sets it for multicast;
+  // unicast replies to QU questions would carry the default TTL and Shelly controllers drop those.
+  // The responder opens new 5353 sockets after Wi-Fi reconnects, so this runs on every refresh.
+  for (struct udp_pcb *pcb = udp_pcbs; pcb != nullptr; pcb = pcb->next) {
+    if (pcb->local_port == 5353)
+      pcb->ttl = 255;
+  }
   if (this->mdns_services_added_ && this->mdns_signature_ == signature)
     return;
 
@@ -370,12 +377,6 @@ void ShellyEmu::mdns_refresh_() {
     this->mdns_services_added_ = true;
     ESP_LOGI(TAG, "mDNS: %s.local advertising _shelly._tcp as %s", this->hostname_.c_str(),
              this->device_id_.c_str());
-  }
-  // RFC 6762 requires IP TTL 255 on every mDNS packet. The responder only sets it for multicast;
-  // unicast replies to QU questions would carry the default TTL and Shelly controllers drop those.
-  for (struct udp_pcb *pcb = udp_pcbs; pcb != nullptr; pcb = pcb->next) {
-    if (pcb->local_port == 5353)
-      pcb->ttl = 255;
   }
   this->mdns_signature_ = signature;
 }

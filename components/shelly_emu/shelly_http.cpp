@@ -85,7 +85,12 @@ static void coerce_params(const QueryList &q, JsonDocument &params, const char *
 static void send_json(AsyncWebServerRequest *request, int code, const std::string &body) {
   auto *response = request->beginResponse(code, "application/json", body);
   response->addHeader("Server", "ShellyHTTP/1.0.0");
+  response->addHeader("Connection", "close");
   request->send(response);
+  // A real Shelly closes the connection after every response. Do the same so idle controller
+  // connections cannot pile up in the ESP-IDF HTTP server's small socket pool.
+  httpd_req_t *raw = *request;
+  httpd_sess_trigger_close(raw->handle, httpd_req_to_sockfd(raw));
 }
 
 static std::string error_json(const RpcError &err) {
