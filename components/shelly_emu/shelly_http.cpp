@@ -145,14 +145,17 @@ void ShellyHttpHandler::handle_bare_(AsyncWebServerRequest *request, const char 
 static std::string peer_address(const httpd_req_t *raw) {
   struct sockaddr_storage addr{};
   socklen_t len = sizeof(addr);
-  char buf[INET6_ADDRSTRLEN] = "?";
+  char buf[48] = "?";
   const int fd = httpd_req_to_sockfd(const_cast<httpd_req_t *>(raw));
   if (fd >= 0 && getpeername(fd, reinterpret_cast<struct sockaddr *>(&addr), &len) == 0) {
     if (addr.ss_family == AF_INET) {
       inet_ntop(AF_INET, &reinterpret_cast<struct sockaddr_in *>(&addr)->sin_addr, buf, sizeof(buf));
-    } else if (addr.ss_family == AF_INET6) {
+    }
+#if LWIP_IPV6
+    else if (addr.ss_family == AF_INET6) {
       inet_ntop(AF_INET6, &reinterpret_cast<struct sockaddr_in6 *>(&addr)->sin6_addr, buf, sizeof(buf));
     }
+#endif
   }
   return buf;
 }
