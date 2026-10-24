@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include <lwip/sockets.h>
 #include "esphome/core/log.h"
 
 namespace esphome::shelly_emu {
@@ -141,10 +142,26 @@ void ShellyHttpHandler::handle_bare_(AsyncWebServerRequest *request, const char 
   send_json(request, 200, out);
 }
 
+static std::string peer_address(const httpd_req_t *raw) {
+  struct sockaddr_storage addr{};
+  socklen_t len = sizeof(addr);
+  char buf[INET6_ADDRSTRLEN] = "?";
+  const int fd = httpd_req_to_sockfd(const_cast<httpd_req_t *>(raw));
+  if (fd >= 0 && getpeername(fd, reinterpret_cast<struct sockaddr *>(&addr), &len) == 0) {
+    if (addr.ss_family == AF_INET) {
+      inet_ntop(AF_INET, &reinterpret_cast<struct sockaddr_in *>(&addr)->sin_addr, buf, sizeof(buf));
+    } else if (addr.ss_family == AF_INET6) {
+      inet_ntop(AF_INET6, &reinterpret_cast<struct sockaddr_in6 *>(&addr)->sin6_addr, buf, sizeof(buf));
+    }
+  }
+  return buf;
+}
+
 void ShellyHttpHandler::handleRequest(AsyncWebServerRequest *request) {
   const std::string url = request_url(request);
   const httpd_req_t *raw = *request;
   const QueryList query = parse_query(raw->uri);
+  ESP_LOGD(TAG, "%s %s from %s", request->method() == HTTP_POST ? "POST" : "GET", raw->uri, peer_address(raw).c_str());
   std::string body = std::move(this->body_);
   this->body_.clear();
   const bool is_post = request->method() == HTTP_POST;

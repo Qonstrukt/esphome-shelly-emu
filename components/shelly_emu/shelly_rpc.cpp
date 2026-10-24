@@ -748,7 +748,8 @@ RpcError ShellyEmu::rpc_call(const char *method, JsonVariantConst params, JsonDo
   auto starts = [method](const char *p) { return strncasecmp(method, p, strlen(p)) == 0; };
   auto ack = [&o]() { o["restart_required"] = false; };
 
-  ESP_LOGD(TAG, "%s %s", via_ble ? "BLE" : "HTTP", method);
+  if (via_ble)
+    ESP_LOGD(TAG, "BLE %s", method);
 
   // ---- Shelly.* ----
   if (is("Shelly.GetDeviceInfo")) {
