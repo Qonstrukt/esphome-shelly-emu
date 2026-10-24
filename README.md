@@ -118,7 +118,7 @@ shelly_emu:
   switches:                  # 1..N entries, N = channels of the model
     - switch: ha_boiler      # any ESPHome switch; its state is the Shelly output
       name: "Boiler"
-      power: ha_boiler_power          # W   (optional, default 0)
+      power: ha_boiler_power          # W   (optional; derived from voltage * current * pf if absent)
       voltage: ha_boiler_voltage      # V   (optional)
       current: ha_boiler_current      # A   (optional, derived from P/V if absent)
       energy: ha_boiler_energy        # total energy (optional; integrated from power if absent)
@@ -138,9 +138,9 @@ shelly_emu:
     neutral_current: ...     # optional
     temperature: ...         # optional
     phases:                  # 1..3 entries (a, b, c); missing phases report 0 W
-      - power: p1_power_l1   # W, negative = export
+      - power: p1_power_l1   # W, negative = export (derived from voltage * current * pf if absent)
         voltage: ...         # V (default 230)
-        current: ...         # A (derived if absent)
+        current: ...         # A (derived if absent; a negative current means export)
         apparent_power: ...  # VA (derived if absent)
         power_factor: ...    # default 1
         frequency: ...       # default 50

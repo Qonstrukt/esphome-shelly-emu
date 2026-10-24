@@ -188,14 +188,20 @@ void ShellyEmu::update_snapshot_() {
     }
     s.output = state;
     s.input = ch.input != nullptr && ch.input->state;
-    s.apower = sensor_value(ch.power, 0.0f);
     s.voltage = sensor_value(ch.voltage, NAN);
     s.freq = sensor_value(ch.frequency, NAN);
     s.temp = sensor_value(ch.temperature, NAN);
     s.current = sensor_value(ch.current, NAN);
+    const float pf_sensor = sensor_value(ch.power_factor, NAN);
+    if (ch.power != nullptr || std::isnan(s.current) || std::isnan(s.voltage)) {
+      s.apower = sensor_value(ch.power, 0.0f);
+    } else {
+      // No power sensor but voltage and current are known: P = U * I * pf
+      s.apower = s.voltage * s.current * (std::isnan(pf_sensor) ? 1.0f : pf_sensor);
+    }
     if (std::isnan(s.current))
       s.current = (!std::isnan(s.voltage) && s.voltage > 0) ? std::fabs(s.apower) / s.voltage : 0.0f;
-    s.pf = sensor_value(ch.power_factor, NAN);
+    s.pf = pf_sensor;
     if (std::isnan(s.pf))
       s.pf = s.apower != 0 ? 1.0f : 0.0f;
     s.aenergy = ch.energy != nullptr ? sensor_value(ch.energy, 0.0f) * ch.energy_scale : ch.integrated_wh;
@@ -206,16 +212,27 @@ void ShellyEmu::update_snapshot_() {
     for (uint8_t p = 0; p < EM_PHASES; p++) {
       auto &ph = this->em_phases_[p];
       auto &e = snap.em.phase[p];
-      e.act_power = sensor_value(ph.power, 0.0f);
       e.voltage = sensor_value(ph.voltage, 230.0f);
       e.freq = sensor_value(ph.frequency, 50.0f);
       e.pf = sensor_value(ph.power_factor, NAN);
       if (std::isnan(e.pf))
         e.pf = 1.0f;
+      const float current_sensor = sensor_value(ph.current, NAN);
+      if (ph.power != nullptr || std::isnan(current_sensor)) {
+        e.act_power = sensor_value(ph.power, 0.0f);
+      } else {
+        // No power sensor but current (and voltage) are known: P = U * I * pf
+        e.act_power = e.voltage * current_sensor * e.pf;
+      }
       e.aprt_power = sensor_value(ph.apparent_power, NAN);
-      if (std::isnan(e.aprt_power))
-        e.aprt_power = std::fabs(e.pf) > 0.01f ? std::fabs(e.act_power) / std::fabs(e.pf) : std::fabs(e.act_power);
-      e.current = sensor_value(ph.current, NAN);
+      if (std::isnan(e.aprt_power)) {
+        if (!std::isnan(current_sensor)) {
+          e.aprt_power = e.voltage * std::fabs(current_sensor);
+        } else {
+          e.aprt_power = std::fabs(e.pf) > 0.01f ? std::fabs(e.act_power) / std::fabs(e.pf) : std::fabs(e.act_power);
+        }
+      }
+      e.current = current_sensor;
       if (std::isnan(e.current))
         e.current = e.voltage > 0 ? e.aprt_power / e.voltage : 0.0f;
       e.energy = ph.energy != nullptr ? sensor_value(ph.energy, 0.0f) * this->em_energy_scale_ : ph.integrated_wh;
