@@ -183,10 +183,13 @@ text_sensor:
 
 ## Keeping the device "online" in Sigen
 
-The SigenStor marks a Shelly offline when it stops answering, and an ESP32 in its
-default Wi-Fi power-save mode answers multicast (mDNS) queries unreliably: ping times of
-around 100 ms instead of a few ms are the tell-tale sign. For a node that only exists to
-be polled, disable power saving and give Wi-Fi time to recover before rebooting:
+**Set `power_save_mode: none`.** The SigenStor polls each channel sequentially, several
+requests per second, with a short per-request timeout, and marks the device offline after
+a few slow or failed polls. An ESP32 in its default Wi-Fi power-save mode adds about
+100 ms to every round trip (ping times of ~100 ms instead of a few ms are the tell-tale
+sign) and drops multicast mDNS queries, which produced regular "offline" episodes in
+testing; with power saving disabled they stopped. Also give Wi-Fi time to recover before
+rebooting:
 
 ```yaml
 wifi:
